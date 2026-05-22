@@ -8960,21 +8960,7 @@ Always be helpful, clear, and concise. If you don't know something specific, say
                                     totalIncome: 0, comm: 0
                                 };
 
-                                // Handle referral commission
-                                if (refCode && refCode !== "ROOT") {
-                                    db.ref('users').orderByChild('refCode').equalTo(refCode).once('value', refSnap => {
-                                        if (refSnap.exists()) {
-                                            const refKey = Object.keys(refSnap.val())[0];
-                                            const refUser = refSnap.val()[refKey];
-                                            db.ref('settings/refBonus').once('value', rbSnap => {
-                                                const refBonus = rbSnap.exists() ? Number(rbSnap.val()) : 20;
-                                                const newComm = (refUser.comm || 0) + refBonus;
-                                                const newBalance = (refUser.balance || 0) + refBonus;
-                                                db.ref('users/' + refKey).update({ comm: newComm, balance: newBalance });
-                                            }).catch(() => {});
-                                        }
-                                    }).catch(() => {});
-                                }
+                                // Referral link tracked at registration; commission (15%) is credited when referred user invests
 
                                 db.ref('users/' + uid).set(newUser).then(() => {
                                     resetBtn();
