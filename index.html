@@ -9869,17 +9869,19 @@ Always be helpful, clear, and concise. If you don't know something specific, say
         function handleCommission(refCode, price, level) {
             if(!refCode || refCode === "ROOT" || level > 3) return;
             
-            // Updated Commission Rates
-            let rate = level === 1 ? 0.15 : (level === 2 ? 0.03 : 0.02); 
+            // Commission Rates: Level 1 = 15%, Level 2 = 3%, Level 3 = 2%
+            const commRates = { 1: 0.15, 2: 0.03, 3: 0.02 };
+            const rate = commRates[level] || 0;
+            const commAmount = Math.round(price * rate * 100) / 100;
             
             db.ref('users').orderByChild('refCode').equalTo(refCode).once('value', snap => {
                 if(snap.exists()) {
                     const key = Object.keys(snap.val())[0];
                     const up = snap.val()[key];
                     db.ref('users/' + key).update({ 
-                        balance: (up.balance||0) + (price*rate), 
-                        comm: (up.comm||0) + (price*rate),
-                        totalIncome: (up.totalIncome||0) + (price*rate)
+                        balance: Math.round(((up.balance||0) + commAmount) * 100) / 100, 
+                        comm: Math.round(((up.comm||0) + commAmount) * 100) / 100,
+                        totalIncome: Math.round(((up.totalIncome||0) + commAmount) * 100) / 100
                     });
                     handleCommission(up.refBy, price, level + 1);
                 }
@@ -10039,6 +10041,19 @@ Always be helpful, clear, and concise. If you don't know something specific, say
                 // Verify specific item hasn't been collected
                 db.ref(`investments/u_${currentUser.phone}/${itemKey}`).once('value', invSnap => {
                     const inv = invSnap.val();
+
+                    // Fix: Only allow collection starting from the NEXT day after investment
+                    const investDate = inv.date ? new Date(inv.date) : null;
+                    if (investDate) {
+                        const investDay = new Date(investDate.getFullYear(), investDate.getMonth(), investDate.getDate());
+                        const today = new Date();
+                        const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                        if (todayDay <= investDay) {
+                            showToast("Daily income will be available starting tomorrow.");
+                            return;
+                        }
+                    }
+
                     if(inv.lastCollected === todayStr) {
                         showToast("Already collected today.");
                         return;
